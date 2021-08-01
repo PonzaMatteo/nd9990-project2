@@ -18,7 +18,7 @@ import { filterImageFromURL, deleteLocalFiles } from './util/util';
 
   app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error(err)
-    res.status(500).send({ "error": "An error occurred" })
+    res.status(500).send({ "error": "An error has occurred" })
   })
   app.use(bodyParser.json());
 
