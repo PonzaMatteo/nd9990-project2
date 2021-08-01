@@ -33,19 +33,21 @@ import { error } from 'console';
       return
     }
 
-    const out = await filterImageFromURL(imageUrl)
-    res.sendFile(
-      out,
-      async (err: any) => {
-        if (err) { console.log(err) }
-        try {
-          await deleteLocalFiles([out])
-        } catch (err) {
-          console.error("failed to cleanup files")
-        }
-
-      }
-    )
+    try {
+      const out = await filterImageFromURL(imageUrl)
+      res.sendFile(
+        out,
+        async (err: any) => {
+          if (err) { console.log(err) }
+          try {
+            await deleteLocalFiles([out])
+          } catch (err) {
+            console.error("failed to cleanup files")
+          }
+        })
+    } catch {
+      res.status(422).send({ error: `Failed to process remote image: ${imageUrl}` })
+    }
   })
 
 
