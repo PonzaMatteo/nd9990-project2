@@ -1,6 +1,8 @@
 import express, { NextFunction } from 'express';
 import bodyParser from 'body-parser';
 import { filterImageFromURL, deleteLocalFiles } from './util/util';
+import 'express-async-errors';
+import { error } from 'console';
 
 (async () => {
 
@@ -12,36 +14,49 @@ import { filterImageFromURL, deleteLocalFiles } from './util/util';
 
   // Use the body parser middleware for post requests
   app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.log(`Received request: ${req.method} ${req.url}`)
-    next()
+    try {
+      console.log(`Received request: ${req.method} ${req.url}`)
+      next()
+    } catch (err) {
+      next(error)
+    }
   })
 
-  app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error(err)
-    res.status(500).send({ "error": "An error has occurred" })
-  })
   app.use(bodyParser.json());
 
   // GET image_url={{URL}}
-  app.get("/filteredimage", async (req, res) => {
-    const imageUrl = req.query.image_url
+  app.get("/filteredimage", async (req: express.Request, res: express.Response) => {
+    const imageUrl = req.query.image_url || ""
+
     if (!isURL(imageUrl)) {
       res.status(400).send({ error: "`image_url` is not a valid url" })
+      return
     }
+
     const out = await filterImageFromURL(imageUrl)
-    res.sendFile(out, async (err) => {
-      if (err) {
-        console.log(err)
+    res.sendFile(
+      out,
+      async (err: any) => {
+        if (err) { console.log(err) }
+        try {
+          await deleteLocalFiles([out])
+        } catch (err) {
+          console.error("failed to cleanup files")
+        }
+
       }
-      await deleteLocalFiles([out])
-    })
+    )
   })
 
 
-  app.get("/", async (req, res) => {
+  app.get("/", async (req: express.Request, res: express.Response) => {
     res.send("try GET /filteredimage?image_url={{}}")
   });
 
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error(err)
+    res.status(err.status || 500).send({ "error": "An error has occurred" })
+  })
 
   // Start the Server
   app.listen(port, () => {
